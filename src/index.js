@@ -2,11 +2,11 @@ import createProject from "./createProject";
 import createTodoItem from "./createTodoItem";
 import * as projects from "./projects";
 import { loadProjects, addEventListeners } from "./displayController";
+import "./style.css";
 
-export { registerProject , addTodoToProject }
+export { registerProject , addTodoToProject, getProjectTodos }
 
 function init() {
-    registerProject("Inbox");
     loadProjects();
     addEventListeners();
 }
@@ -16,10 +16,15 @@ function registerProject(name) {
     projects.addProject(project);
 }
 
-function addTodoToProject(title, description, dueDate, priority, projectId) {
-    const todoItem = createTodoItem( title, description, dueDate, priority, projectId );
-    const selectedProject = projects.findProject(todoItem.projectId);
-    selectedProject.addTodoItem(todoItem);
+function addTodoToProject( {title, description, date, priority, projectId} ) {
+    const todoItem = createTodoItem( title, description, date, priority, projectId );
+    const project = projects.findProject(todoItem.projectId);
+    project.addTodoItem(todoItem);
+}
+
+function getProjectTodos(projectId) {
+    const project = projects.findProject(projectId);
+    return project.getTodoItems();
 }
 
 init();

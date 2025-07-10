@@ -1,41 +1,114 @@
-import { registerProject, addTodoToProject } from "./index";
-import { getProjects } from "./projects";
+import { registerProject, addTodoToProject, getProjectTodos } from "./index";
+import { getProjects, DEFAULT_PROJECT_ID } from "./projects";
 export { loadProjects, addEventListeners }
 
-function createProjectEl() {
-    const projectEl = document.createElement("div");
-    return projectEl;
-}
-
-function createTodoItemEl() {
-    const todoItemEl = document.createElement("div");
-    todoItemEl.textContent = "";
-    return todoItemEl;
-}
-
-const select = document.querySelector("select");
+let currentProjectId = DEFAULT_PROJECT_ID;
+const select = document.querySelector("select#project");
+const projectsSection = document.querySelector("aside section.projects");
 function loadProjects() {
-
-    for (const project of getProjects()) {
-        const option = document.createElement("option");
-        option.value = project.id;
-        option.textContent = project.name;
-        select.appendChild(option);
-    }
+    const projects = getProjects();
+    loadArrayToEl(projects, select, addProjectOption);
+    loadArrayToEl(projects, projectsSection, addProjectButton);
 }
 
-function refreshProjects() {
-    select.replaceChildren();
-    loadProjects();
+function selectCurrentProject() {
+    const currentProject = [...select.options].find((option) => option.value === currentProjectId);
+    currentProject.selected = true;
+}
+
+function loadTodos(projectId) {
+    const todoItemsEl = document.querySelector("section.todo-items");
+    const todos = getProjectTodos(projectId);
+    loadArrayToEl(todos, todoItemsEl, addTodoParas);
 }
 
 function addEventListeners() {
-    document.querySelector("#add-todo").addEventListener("click", () => addTodoToProject("birthday", "It's my birthday", "2025-09-12", 2, select.value));
+
+    const form = document.querySelector("form");
+    const button = document.querySelector("#add-todo-form");
+    const dialog = document.querySelector("dialog");
+
+    function toggleTodoForm() {
+        if (dialog.open) {
+            dialog.close();
+            form.reset();
+            selectCurrentProject();
+        } else {
+            dialog.show();
+        }
+        
+        toggleTodoFormButton();
+    } 
+
+    document.querySelector("#add-todo").addEventListener("click", (event) => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        addTodoToProject(readForm());
+        loadTodos(currentProjectId);
+        toggleTodoForm();
+    });
 
     document.querySelector("#add-project").addEventListener("click", () => {
         const projectName = document.querySelector("input").value;
         if (projectName === "") return;
         registerProject(projectName);
-        refreshProjects();
+        loadProjects();
     });
+
+    function toggleTodoFormButton() {
+        button.hidden = !button.hidden;
+    }
+
+    document.querySelector("section.projects").addEventListener("click", (event) => {
+        const projectId = event.target.dataset.projectId;
+        if (!projectId || projectId === currentProjectId) return;
+        currentProjectId = projectId;
+        loadTodos(currentProjectId);
+        selectCurrentProject();
+        if (dialog.open) toggleTodoForm();
+    });
+
+    document.querySelector("#add-todo-form").addEventListener("click", () => toggleTodoForm());
+}
+
+function readForm() {
+    return {
+        title: document.querySelector("#todo-name").value,
+        description: document.querySelector("#description").value,
+        date: document.querySelector("#date").value,
+        priority: document.querySelector("#priority").value,
+        projectId: select.value,
+    }
+}
+
+function loadArrayToEl(array, el, mapFunc) {
+    el.replaceChildren(...array.map(mapFunc));
+}
+
+function addProjectOption(project) {
+    const option = document.createElement("option");
+    option.value = project.id;
+    option.textContent = project.name;
+
+    return option;
+}
+
+function addProjectButton(project) {
+    const button = document.createElement("button");
+    button.dataset.projectId = project.id;
+    button.textContent = project.name;
+
+    return button;
+}
+
+function addTodoParas(todo) {
+    const div = document.createElement("div");
+    for (const prop in todo) {
+        if (prop === "projectId") continue;
+        const para = document.createElement("p");
+        para.textContent = todo[prop];
+        div.appendChild(para);
+    }
+
+    return div;
 }

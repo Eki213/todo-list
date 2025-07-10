@@ -1,5 +1,5 @@
 export default createTodoItem;
 
-function createTodoItem(title, description, dueDate, priority, projectId) {
-    return { title, description, dueDate, priority, projectId };
+function createTodoItem(title, description, date, priority, projectId) {
+    return { title, description, date, priority, projectId };
 }

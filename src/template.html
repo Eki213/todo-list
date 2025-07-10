@@ -6,10 +6,47 @@
     <title>Projects</title>
 </head>
 <body>
-    <button type="button" id="add-todo">Add task</button>
-    <select name="project" id="project">
-    </select>
-    <button type="button" id="add-project">Add Project</button>
-    <input type="text" name="new-project" id="new-project">
+        <aside>
+            <section class="projects">
+            </section>
+            <button type="button" id="add-project">Add Project</button>
+            <input type="text" name="new-project" id="new-project">
+            
+        </aside>
+        <main>
+            <section class="todo-items">
+            </section>
+            <dialog>
+                <form>
+                    <p>
+                        <label for="todo-name">Name:</label>
+                        <input type="text" name="todo-name" id="todo-name" required>
+                    </p>
+                    <p>
+                        <label for="description">Description:</label>
+                        <input type="text" name="description" id="description">
+                    </p>
+                    <p>
+                        <label for="date">Date:</label>
+                        <input type="date" name="date" id="date">
+                    </p>
+                    <p>
+                        <label for="priority">Priority:</label>
+                        <select name="priority" id="priority">
+                            <option value="priority1">Priority1</option>
+                            <option value="priority2">Priority2</option>
+                            <option value="priority3">Priority3</option>
+                            <option value="priority4">Priority4</option>
+                        </select>
+                    </p>
+                    <p>
+                        <button id="add-todo">Add task</button>
+                        <select name="project" id="project"></select>
+                    </p>
+                </form>
+            </dialog>
+            <button type="button" id="add-todo-form">Add task</button>
+        </main>
+
 </body>
 </html>

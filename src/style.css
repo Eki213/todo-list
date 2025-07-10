@@ -1,0 +1,32 @@
+:root {
+    font-size: clamp(1rem, 0.8rem + 1.5vw, 2rem);
+    line-height: 1.5;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    min-height: 100vh;
+}
+
+dialog {
+    position: absolute;
+}
+
+main {
+    position: relative;
+    flex: 1;
+}
+
+aside button {
+    display: block;
+}
+
+.hidden {
+    visibility: hidden;
+}
