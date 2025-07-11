@@ -1,14 +1,17 @@
 import { registerProject, addTodoToProject, getProjectTodos } from "./index";
 import { getProjects, DEFAULT_PROJECT_ID } from "./projects";
+import { saveLastProjectId, getLastProjectId } from "./storage";
 export { loadProjects, addEventListeners }
 
-let currentProjectId = DEFAULT_PROJECT_ID;
+let currentProjectId = getLastProjectId() || DEFAULT_PROJECT_ID;
 const select = document.querySelector("select#project");
 const projectsSection = document.querySelector("aside section.projects");
 function loadProjects() {
     const projects = getProjects();
     loadArrayToEl(projects, select, addProjectOption);
     loadArrayToEl(projects, projectsSection, addProjectButton);
+    loadTodos(currentProjectId);
+    selectCurrentProject();
 }
 
 function selectCurrentProject() {
@@ -65,6 +68,7 @@ function addEventListeners() {
         currentProjectId = projectId;
         loadTodos(currentProjectId);
         selectCurrentProject();
+        saveLastProjectId(currentProjectId);
         if (dialog.open) toggleTodoForm();
     });
 
