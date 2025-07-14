@@ -3,6 +3,7 @@ import createTodoItem from "./createTodoItem";
 import * as projects from "./projects";
 import { loadProjects, addEventListeners } from "./displayController";
 import  { saveProjects } from "./storage";
+import "./formatDate.js";
 import "./style.css";
 
 export { registerProject , addTodoToProject, getProjectTodos }
@@ -19,8 +20,8 @@ function registerProject(name) {
 }
 
 function addTodoToProject( {title, description, date, priority, projectId} ) {
-    const todoItem = createTodoItem( title, description, date, priority, projectId );
-    const project = projects.findProject(todoItem.projectId);
+    const todoItem = createTodoItem( title, description, date, priority );
+    const project = projects.findProject(projectId);
     project.addTodoItem(todoItem);
     saveProjects();
 }

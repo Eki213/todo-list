@@ -1,5 +1,7 @@
 import { getProjects } from "./projects";
 import  createProject  from "./createProject";
+import { parseJSON } from "date-fns";
+import { parseDate } from "./formatDate";
 export { saveProjects, load, saveLastProjectId , getLastProjectId };
 
 function saveProjects() {
@@ -11,15 +13,23 @@ function saveProjects() {
 
 function load() {
     const rawProjectData = localStorage.getItem("projects");
+    console.log(parseJSON(""));
     if (!rawProjectData) return null;
     const projectData = JSON.parse(rawProjectData);
 
     const projects = projectData.map(p => {
         const project = createProject(p.name, p.id);
-        p.todos.forEach(todo => project.addTodoItem(todo));
+        p.todos.forEach(todo => {
+            console.log(todo.date);
+            todo.date = parseDate(todo.date);
+            console.log(todo.date);
+            project.addTodoItem(todo);
+        });
         return project;
     });
+    console.log(projects[0].getTodoItems());
     return projects;
+    
 }
 
 function saveLastProjectId(projectId) {

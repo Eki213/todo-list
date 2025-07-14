@@ -1,11 +1,16 @@
 import { registerProject, addTodoToProject, getProjectTodos } from "./index";
 import { getProjects, DEFAULT_PROJECT_ID } from "./projects";
 import { saveLastProjectId, getLastProjectId } from "./storage";
-export { loadProjects, addEventListeners }
+import { getFormattedDate, parseDate } from "./formatDate";
+import { format } from "date-fns";
+export { loadProjects, addEventListeners };
 
 let currentProjectId = getLastProjectId() || DEFAULT_PROJECT_ID;
+
+document.querySelector("#date").min = format(new Date(), "yyyy-MM-dd");
 const select = document.querySelector("select#project");
 const projectsSection = document.querySelector("aside section.projects");
+
 function loadProjects() {
     const projects = getProjects();
     loadArrayToEl(projects, select, addProjectOption);
@@ -26,7 +31,6 @@ function loadTodos(projectId) {
 }
 
 function addEventListeners() {
-
     const form = document.querySelector("form");
     const button = document.querySelector("#add-todo-form");
     const dialog = document.querySelector("dialog");
@@ -41,7 +45,7 @@ function addEventListeners() {
         }
         
         toggleTodoFormButton();
-    } 
+    }
 
     document.querySelector("#add-todo").addEventListener("click", (event) => {
         event.preventDefault();
@@ -79,7 +83,7 @@ function readForm() {
     return {
         title: document.querySelector("#todo-name").value,
         description: document.querySelector("#description").value,
-        date: document.querySelector("#date").value,
+        date: parseDate(document.querySelector("#date").value),
         priority: document.querySelector("#priority").value,
         projectId: select.value,
     }
@@ -108,9 +112,8 @@ function addProjectButton(project) {
 function addTodoParas(todo) {
     const div = document.createElement("div");
     for (const prop in todo) {
-        if (prop === "projectId") continue;
         const para = document.createElement("p");
-        para.textContent = todo[prop];
+        para.textContent = prop === "date" ? getFormattedDate(todo[prop]) : todo[prop];
         div.appendChild(para);
     }
 
