@@ -1,4 +1,4 @@
-import { registerProject, addTodoToProject, getProjectTodos } from "./index";
+import { registerProject, addTodoToProject, getProjectTodos, deleteTodoByIndex } from "./index";
 import { getProjects, DEFAULT_PROJECT_ID } from "./projects";
 import { saveLastProjectId, getLastProjectId } from "./storage";
 import { getFormattedDate, parseDate } from "./formatDate";
@@ -77,6 +77,18 @@ function addEventListeners() {
     });
 
     document.querySelector("#add-todo-form").addEventListener("click", () => toggleTodoForm());
+
+    document.querySelector("section.todo-items").addEventListener("click", (event) => {
+        if (event.target.tagName !== "BUTTON") return;
+
+        const button = event.target;
+        const todoIndex = button.closest(".todo-item").dataset.index;
+
+        if (button.className === "delete-button") deleteTodoByIndex(currentProjectId, todoIndex);
+
+        loadTodos(currentProjectId);
+
+    });
 }
 
 function readForm() {
@@ -109,13 +121,27 @@ function addProjectButton(project) {
     return button;
 }
 
+function createDeleteButton() {
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "Delete";
+    deleteButton.type = "button";
+    deleteButton.className = "delete-button";
+
+    return deleteButton;
+}
+
 function addTodoParas(todo) {
     const div = document.createElement("div");
+    div.className = "todo-item";
+    div.dataset.index = getProjectTodos(currentProjectId).indexOf(todo);
+    const deleteButton = createDeleteButton();
+
     for (const prop in todo) {
         const para = document.createElement("p");
         para.textContent = prop === "date" ? getFormattedDate(todo[prop]) : todo[prop];
         div.appendChild(para);
     }
 
+    div.appendChild(deleteButton);
     return div;
 }
