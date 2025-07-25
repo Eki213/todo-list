@@ -1,4 +1,4 @@
-import { registerProject, addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo } from "./index";
+import { registerProject, addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo, checkTodo } from "./index";
 import { getProjects, DEFAULT_PROJECT_ID } from "./projects";
 import { saveLastProjectId, getLastProjectId } from "./storage";
 import { getFormattedDate, parseDate } from "./formatDate";
@@ -17,6 +17,7 @@ function loadProjects() {
 function loadTodos() {
     const todoItemsEl = document.querySelector("section.todo-items");
     const todos = getProjectTodos(currentProjectId);
+    closeForm();
     loadArrayToEl(todos, todoItemsEl, createTodoEl);
 }
 
@@ -32,13 +33,12 @@ function addEventListeners() {
         const projectId = event.target.dataset.projectId;
         if (!projectId || projectId === currentProjectId) return;
         currentProjectId = projectId;
-        closeForm();
         loadTodos();
         saveLastProjectId(currentProjectId);
     });
 
     document.querySelector("main").addEventListener("click", (event) => {
-        if (event.target.tagName !== "BUTTON") return;
+        if (event.target.tagName !== "BUTTON" && event.target.type !== "checkbox") return;
         const button = event.target;
         const todoEl = button.closest(".todo-item");
         const todoIndex = todoEl && todoEl.dataset.index;
@@ -62,6 +62,11 @@ function addEventListeners() {
 
             case "cancel-button":
                 closeForm();
+                break;
+
+            default:
+                const todoCheckbox = event.target;
+                checkTodo(currentProjectId, todoIndex, todoCheckbox.checked);
                 break;
         }
     });
@@ -173,8 +178,14 @@ function createTodoEl(todo) {
     div.dataset.index = getProjectTodos(currentProjectId).indexOf(todo);
     const deleteButton = createDeleteButton();
     const editButton = createEditButton();
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
 
+    checkbox.checked = todo.isCompleted;
+    div.appendChild(checkbox);
+    
     for (const prop in todo) {
+        if (prop === "isCompleted") continue;
         const para = document.createElement("p");
         para.textContent = prop === "date" ? getFormattedDate(todo[prop]) : todo[prop];
         para.className = prop;

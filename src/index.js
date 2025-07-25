@@ -6,7 +6,7 @@ import  { saveProjects } from "./storage";
 import "./formatDate.js";
 import "./style.css";
 
-export { registerProject , addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo }
+export { registerProject , addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo, checkTodo }
 
 function init() {
     loadProjects();
@@ -53,6 +53,12 @@ function editTodo(projectId, index, data) {
     }
     
     Object.assign(todo, todoData);
+    saveProjects();
+}
+
+function checkTodo(projectId, index, isChecked) {
+    const todo = getTodoFromProject(projectId, index);
+    todo.isCompleted = isChecked;
     saveProjects();
 }
 
