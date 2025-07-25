@@ -6,7 +6,7 @@ import  { saveProjects } from "./storage";
 import "./formatDate.js";
 import "./style.css";
 
-export { registerProject , addTodoToProject, getProjectTodos, deleteTodoByIndex }
+export { registerProject , addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo }
 
 function init() {
     loadProjects();
@@ -35,6 +35,25 @@ function deleteTodoByIndex(projectId, index) {
 function getProjectTodos(projectId) {
     const project = projects.findProject(projectId);
     return project.getTodoItems();
+}
+
+function getTodoFromProject(projectId, index) {
+    const project = projects.findProject(projectId);
+    return project.getTodoItems()[index];
+}
+
+function editTodo(projectId, index, data) {
+    const todo = getTodoFromProject(projectId, index);
+
+    const { projectId: selectedProjectId, ...todoData } = data;
+    
+    if (selectedProjectId !== projectId) {
+        deleteTodoByIndex(projectId, index);
+        addTodoToProject(data);
+    }
+    
+    Object.assign(todo, todoData);
+    saveProjects();
 }
 
 init();
