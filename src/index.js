@@ -1,21 +1,38 @@
 import createProject from "./createProject";
 import createTodoItem from "./createTodoItem";
 import * as projects from "./projects";
-import { loadProjects, addEventListeners } from "./displayController";
+import { load, addEventListeners } from "./displayController";
 import  { saveProjects } from "./storage";
 import "./formatDate.js";
 import "./style.css";
 
-export { registerProject , addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo, checkTodo }
+export { registerProject , addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo, checkTodo, editProject, removeProject, getProject }
 
 function init() {
-    loadProjects();
+    load();
     addEventListeners();
 }
 
-function registerProject(name) {
-    const project = createProject(name);
+function registerProject( { title } ) {
+    const project = createProject(title);
     projects.addProject(project);
+    saveProjects();
+
+    return project.id;
+}
+
+function editProject(projectId, data) {
+    const project = projects.findProject(projectId);
+    Object.assign(project, data);
+    saveProjects();
+}
+
+function getProject(projectId) {
+    return projects.findProject(projectId);
+}
+
+function removeProject(projectId) {
+    projects.deleteProject(projectId);
     saveProjects();
 }
 

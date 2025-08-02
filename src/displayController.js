@@ -1,129 +1,210 @@
-import { registerProject, addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo, checkTodo } from "./index";
+import { registerProject, addTodoToProject, getProjectTodos, deleteTodoByIndex, getTodoFromProject, editTodo, checkTodo, removeProject, editProject, getProject } from "./index";
 import { getProjects, DEFAULT_PROJECT_ID } from "./projects";
 import { saveLastProjectId, getLastProjectId } from "./storage";
 import { getFormattedDate, parseDate } from "./formatDate";
 import { format } from "date-fns";
-export { loadProjects, addEventListeners };
+export { load, addEventListeners };
 
 let currentProjectId = getLastProjectId() || DEFAULT_PROJECT_ID;
 
-function loadProjects() {
-    const projectsSection = document.querySelector("aside section.projects");
-    const projects = getProjects();
-    loadArrayToEl(projects, projectsSection, createProjectButton);
-    loadTodos();
+function loadItems(type) {
+    const listElement = entityHandlers[type]?.getListElement();
+    const items = entityHandlers[type]?.getAll();
+
+    loadArrayToEl(items, listElement, entityHandlers[type]?.createEl);
 }
 
-function loadTodos() {
-    const todoItemsEl = document.querySelector("section.todo-items");
-    const todos = getProjectTodos(currentProjectId);
-    closeForm();
-    loadArrayToEl(todos, todoItemsEl, createTodoEl);
+function load() {
+    entityHandlers.project.load();
+    entityHandlers.todo.load();
 }
 
 function addEventListeners() {
-    document.querySelector("#add-project").addEventListener("click", () => {
-        const projectName = document.querySelector("input").value;
-        if (projectName === "") return;
-        registerProject(projectName);
-        loadProjects();
-    });
+    document.body.addEventListener("click", (event) => {
+        const itemEl = event.target.closest("[data-type]");
+        if (!itemEl) return;
+        
+        const type = itemEl.dataset.type;
+        const keyValue = itemEl.dataset[entityHandlers[type]?.getKey()];
 
-    document.querySelector("section.projects").addEventListener("click", (event) => {
-        const projectId = event.target.dataset.projectId;
-        if (!projectId || projectId === currentProjectId) return;
-        currentProjectId = projectId;
-        loadTodos();
-        saveLastProjectId(currentProjectId);
-    });
+        if (event.target.type === "checkbox") {
+            const todoCheckbox = event.target;
+            checkTodo(currentProjectId, keyValue, todoCheckbox.checked);
+            return;
+        }
 
-    document.querySelector("main").addEventListener("click", (event) => {
-        if (event.target.tagName !== "BUTTON" && event.target.type !== "checkbox") return;
-        const button = event.target;
-        const todoEl = button.closest(".todo-item");
-        const todoIndex = todoEl && todoEl.dataset.index;
+        if (event.target.tagName === "BUTTON") {
+            const button = event.target;
+            const form = entityHandlers[type]?.getForm();
 
-        switch (button.className) {
-            case "delete-button":
-                deleteTodoByIndex(currentProjectId, todoIndex);
-                loadTodos();
-                break;
+            switch (button.className) {
+                case "delete-button":
+                    entityHandlers[type]?.delete(keyValue);
+                    entityHandlers[type]?.load();
+                    break;
 
-            case "save-button":
-                todoEl ? editTodo(currentProjectId, todoIndex, readForm()) : addTodoToProject(readForm());
-                loadTodos();
-                break;
+                case "save-button":
+                    event.preventDefault();
+                    if (!form.isValid()) return;
 
-            case "edit-button":
-            case "add-button":
-                closeForm();
-                openForm(todoIndex);
-                break;
+                    form.close();
+                    entityHandlers[type]?.save(keyValue, form.read());
+                    entityHandlers[type]?.load();
+                    break;
 
-            case "cancel-button":
-                closeForm();
-                break;
+                case "edit-button":
+                case "add-button":
+                    form.close();
+                    form.open(keyValue);
+                    break;
 
-            default:
-                const todoCheckbox = event.target;
-                checkTodo(currentProjectId, todoIndex, todoCheckbox.checked);
-                break;
+                case "cancel-button":
+                    form.close();
+                    break;
+            }
+
+            return;
+        }
+
+        if (itemEl.className === "project-item" && !itemEl.querySelector("form")) {
+            const projectItem = itemEl;
+            const projectId = projectItem.dataset.projectId;
+            if (projectId === currentProjectId) return;
+            changeProject(projectId);
         }
     });
 }
 
-function closeForm() {
-    const form = document.querySelector("main form");
-    if (!form) return;
-    const activeTodoEl = form.closest(".todo-item");
-
-    if (activeTodoEl) {
-        const todo = getTodoFromProject(currentProjectId, activeTodoEl.dataset.index);
-        form.replaceWith(createTodoEl(todo));
-    } else {
-        form.remove();
-        toggleAddButton();
-    }
+function changeProject(id) {
+    todoForm.close();
+    currentProjectId = id;
+    entityHandlers.todo.load();
+    saveLastProjectId(currentProjectId);
 }
 
-function toggleAddButton() {
-    document.querySelector(".add-button").toggleAttribute("hidden");
-}
+const projectForm = createForm("project", {
+    title: createTitleEl(),
+});
 
-function openForm(index) {
+const todoForm = createForm("todo", {
+    title: createTitleEl(),
+    description: createDescriptionEl(),
+    date: createDatePicker(),
+    priority: createPrioritySelect(),
+    projectId: createProjectSelect(),
+});
+
+const todoListEl = document.querySelector("section.todo-items");
+const projectListEl = document.querySelector("section.projects");
+
+const entityHandlers = {
+    todo: {
+        delete: (index) => deleteTodoByIndex(currentProjectId, index),
+        save: (index, formData) =>
+            index
+                ? editTodo(currentProjectId, index, formData)
+                : addTodoToProject(formData),
+        getKey: () => "index",
+        get: (index) => getTodoFromProject(currentProjectId, index),
+        getAll: () => getProjectTodos(currentProjectId),
+        getEl: (index) => document.querySelector(`.todo-item[data-index="${index}"]`),
+        getForm: () => todoForm,
+        getListElement: () => todoListEl,
+        createEl: (todo) => createTodoEl(todo),
+        load: () => loadItems("todo"),
+    },
+    project: {
+        delete: (id) => {
+            if (currentProjectId === id) changeProject(DEFAULT_PROJECT_ID);
+            removeProject(id);
+            todoForm.updateField("projectId");
+        },
+        save: (id, formData) => {
+            if (id) {
+                editProject(id, formData);
+            } else {
+                const newProjectId = registerProject(formData);
+                changeProject(newProjectId);
+            }
+            todoForm.updateField("projectId");
+        },
+        getKey: () => "projectId",
+        get: (id) => getProject(id),
+        getAll: () => getProjects(),
+        getEl: (id) => document.querySelector(`.project-item[data-project-id="${id}"]`),
+        getForm : () => projectForm,
+        getListElement: () => projectListEl,
+        createEl: (project) => createProjectEl(project),
+        load: () => loadItems("project"),
+    },
+};
+
+function createForm(type, fieldsMap) {
     const form = document.createElement("form");
+    const fields = Object.values(fieldsMap);
+    const addButton = document.querySelector(`[data-type="${type}"].add-button`);
+    const isOpen = () => form.isConnected;
+    const isValid = () => form.reportValidity();
+    let currentKey; 
 
-    const title = createTitleEl();
-    const description = createDescriptionEl();
-    const datePicker = createDatePicker();
-    const prioritySelect = createPrioritySelect();
-    const projectSelect = createProjectSelect();
-    
-    const saveButton = createSaveButton();
-    const cancelButton = createCancelButton();
-        
-    form.appendChild(title);
-    form.appendChild(description);
-    form.appendChild(datePicker);
-    form.appendChild(prioritySelect);
-    form.appendChild(projectSelect);
-    form.appendChild(cancelButton);
-    form.appendChild(saveButton);
+    fields.forEach(el => form.appendChild(el.getEl()));
+    form.appendChild(createCancelButton());
+    form.appendChild(createSaveButton());
 
-    if (index) {
-        const todoEl = document.querySelector(`.todo-item[data-index="${index}"]`);
-        const todo = getTodoFromProject(currentProjectId, index);
+    const toggleAddButton = () => addButton.toggleAttribute("hidden");
 
-        setTitle(title, todo);
-        setDescription(description, todo);
-        setDatePicker(datePicker, todo);
-        setPrioritySelect(prioritySelect, todo);
-
-        todoEl.replaceChildren(form);
-    } else {
-        document.querySelector("section.todo-items").appendChild(form);
-        toggleAddButton();
+    function updateField(prop) {
+        const field = fieldsMap[prop];
+        if (field) field.setEl();
     }
+
+    function setFields(key) {
+        if (!key) {
+            form.reset();
+            updateField("projectId");
+            return;
+        }
+
+        const item = entityHandlers[type]?.get(key);
+        fields.forEach(el => el.setEl(item));
+    }
+
+    function displayForm(key) {
+        if (key) {
+            delete form.dataset.type;
+            entityHandlers[type]?.getEl(key).replaceChildren(form);
+        } else {
+            entityHandlers[type]?.getListElement().appendChild(form);
+            toggleAddButton();
+            form.dataset.type = type;
+        }
+    }
+
+    function read() {
+        return Object.fromEntries(
+            Object.entries(fieldsMap).map(([key, field]) => [key, field.getValue()])
+        );
+    }
+
+    function open(key) {
+        setFields(key);
+        displayForm(key);
+        currentKey = key;
+    }
+
+    function close() {
+        if (!isOpen()) return;
+
+        if (currentKey) {
+            const item = entityHandlers[type]?.get(currentKey);
+            form.replaceWith(entityHandlers[type]?.createEl(item));
+        } else {
+            form.remove();
+            toggleAddButton();
+        }
+    }
+
+    return { setFields, displayForm, open, close, read, isValid, updateField };
 }
 
 function loadArrayToEl(array, el, mapFunc) {
@@ -133,7 +214,7 @@ function loadArrayToEl(array, el, mapFunc) {
 function addProjectOption(project) {
     const option = document.createElement("option");
     option.value = project.id;
-    option.textContent = project.name;
+    option.textContent = project.title;
 
     return option;
 }
@@ -146,12 +227,26 @@ function addPriorityOption(priority) {
     return option;
 }
 
-function createProjectButton(project) {
-    const button = document.createElement("button");
-    button.dataset.projectId = project.id;
-    button.textContent = project.name;
+function createProjectEl(project) {
+    const projectEl = document.createElement("div");
+    projectEl.dataset.projectId = project.id;
+    projectEl.dataset.type = "project";
+    projectEl.className = "project-item";
 
-    return button;
+    const para = document.createElement("p");
+    para.textContent = project.title;
+    para.className = project.title;
+    projectEl.appendChild(para);
+    
+
+    if (project.id !== DEFAULT_PROJECT_ID) {
+        const editButton = createEditButton();
+        const deleteButton = createDeleteButton();
+        projectEl.appendChild(editButton);
+        projectEl.appendChild(deleteButton);
+    }
+
+    return projectEl;
 }
 
 function createDeleteButton() {
@@ -175,15 +270,15 @@ function createEditButton() {
 function createTodoEl(todo) {
     const div = document.createElement("div");
     div.className = "todo-item";
+    div.dataset.type = "todo";
     div.dataset.index = getProjectTodos(currentProjectId).indexOf(todo);
+
     const deleteButton = createDeleteButton();
     const editButton = createEditButton();
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
+    const checkbox = createCheckbox(todo);
 
-    checkbox.checked = todo.isCompleted;
     div.appendChild(checkbox);
-    
+
     for (const prop in todo) {
         if (prop === "isCompleted") continue;
         const para = document.createElement("p");
@@ -194,18 +289,16 @@ function createTodoEl(todo) {
 
     div.appendChild(deleteButton);
     div.appendChild(editButton);
+
     return div;
 }
 
-function readForm() {
-    const form = document.querySelector("main form");
-    return {
-        title: form.querySelector(".title").value,
-        description: form.querySelector(".description").value,
-        date: parseDate(form.querySelector(".date").value),
-        priority: form.querySelector(".priority").value,
-        projectId: form.querySelector(".project").value,
-    }
+function createCheckbox(todo) {
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = todo.isCompleted;
+
+    return checkbox;
 }
 
 function createTitleEl() {
@@ -213,14 +306,30 @@ function createTitleEl() {
     title.required = true;
     title.className = "title";
 
-    return title;
+    function setEl(item) {
+        title.value = item.title;
+    }
+
+    const getEl = () => title;
+
+    const getValue = () => title.value;
+
+    return { setEl, getEl, getValue };
 }
 
 function createDescriptionEl() {
     const description = document.createElement("input");
     description.className = "description";
 
-    return description;
+    function setEl(item) {
+        description.value = item.description;
+    }
+
+    const getEl = () => description;
+
+    const getValue = () => description.value;
+
+    return { setEl, getEl, getValue };
 }
 
 function createDatePicker() {
@@ -229,14 +338,23 @@ function createDatePicker() {
     datePicker.type = "date";
     datePicker.className = "date";
 
-    return datePicker;
+    function setEl(item) {
+        const itemDate = item.date;
+        if (itemDate) datePicker.value = format(itemDate, "yyyy-MM-dd");
+    }
+
+    const getEl = () => datePicker;
+
+    const getValue = () => parseDate(datePicker.value);
+
+    return { setEl, getEl, getValue };
 }
 
 function createSaveButton() {
     const saveButton = document.createElement("button");
     saveButton.textContent = "Save";
     saveButton.className = "save-button";
-    saveButton.type = "button";
+    saveButton.type = "submit";
 
     return saveButton;
 }
@@ -256,35 +374,30 @@ function createPrioritySelect() {
     const PRIORITIES = ["priority1", "priority2", "priority3", "priority4"];
     loadArrayToEl(PRIORITIES, prioritySelect, addPriorityOption);
 
-    return prioritySelect;
+    function setEl(item) {
+        const priorityOption = [...prioritySelect.options].find((option) => option.value === item.priority);
+        priorityOption.selected = true;
+    }
+
+    const getEl = () => prioritySelect;
+
+    const getValue = () => prioritySelect.value;
+
+    return { setEl, getEl, getValue };
 }
 
 function createProjectSelect() {
     const projectSelect = document.createElement("select");
     projectSelect.className = "project";
-    const projects = getProjects();
-    loadArrayToEl(projects, projectSelect, addProjectOption);
 
-    const currentProject = [...projectSelect.options].find((option) => option.value === currentProjectId);
-    currentProject.selected = true;
+    const getEl = () => projectSelect;
+    const setEl = () => {
+        const projects = getProjects();
+        loadArrayToEl(projects, projectSelect, addProjectOption);
+        const currentProject = [...projectSelect.options].find((option) => option.value === currentProjectId);
+        currentProject.selected = true;
+    };
+    const getValue = () => projectSelect.value;
 
-    return projectSelect;
-}
-
-function setTitle(title, todo) {
-    title.value = todo.title;
-}
-
-function setDescription(description, todo) {
-    description.value = todo.description;
-}
-
-function setDatePicker(datePicker, todo) {
-    const todoDate = todo.date;
-    if (todoDate) datePicker.value = format(todoDate, "yyyy-MM-dd");
-}
-
-function setPrioritySelect(prioritySelect, todo) {
-    const priorityOption = [...prioritySelect.options].find((option) => option.value === todo.priority);
-    priorityOption.selected = true;
+    return { getEl, setEl, getValue };
 }

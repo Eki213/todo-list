@@ -14,19 +14,6 @@ body {
     min-height: 100vh;
 }
 
-dialog {
-    position: absolute;
-}
-
 main {
-    position: relative;
     flex: 1;
-}
-
-aside button {
-    display: block;
-}
-
-.hidden {
-    visibility: hidden;
 }
