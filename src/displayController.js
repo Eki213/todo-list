@@ -78,7 +78,7 @@ function addEventListeners() {
 function changeProject(id) {
     todoForm.close();
     currentProjectId = id;
-    entityHandlers.todo.load();
+    load();
     saveLastProjectId(currentProjectId);
 }
 
@@ -97,6 +97,12 @@ const todoForm = createForm("todo", {
 const todoListEl = document.querySelector("section.todo-items");
 const projectListEl = document.querySelector("section.projects");
 
+function setProjectTitleEl() {
+    const currentProject = getProject(currentProjectId);
+    const title = document.querySelector(".project-title");
+    title.textContent = currentProject.title;
+}
+
 const entityHandlers = {
     todo: {
         delete: (index) => deleteTodoByIndex(currentProjectId, index),
@@ -111,7 +117,10 @@ const entityHandlers = {
         getForm: () => todoForm,
         getListElement: () => todoListEl,
         createEl: (todo) => createTodoEl(todo),
-        load: () => loadItems("todo"),
+        load: () => {
+            setProjectTitleEl();
+            loadItems("todo");
+        },
     },
     project: {
         delete: (id) => {
@@ -122,6 +131,7 @@ const entityHandlers = {
         save: (id, formData) => {
             if (id) {
                 editProject(id, formData);
+                setProjectTitleEl();
             } else {
                 const newProjectId = registerProject(formData);
                 changeProject(newProjectId);
@@ -239,12 +249,9 @@ function createProjectEl(project) {
     para.className = "title";
     projectEl.appendChild(para);
     
+    if (project.id === currentProjectId) projectEl.classList.add("active");
 
     if (project.id !== DEFAULT_PROJECT_ID) {
-        // const editButton = createEditButton();
-        // const deleteButton = createDeleteButton();
-        // projectEl.appendChild(editButton);
-        // projectEl.appendChild(deleteButton);
         const buttons = createButtons();
         projectEl.appendChild(buttons);
     }

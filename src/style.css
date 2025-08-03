@@ -35,11 +35,14 @@ aside {
     background-color: rgb(201, 201, 199);
 }
 
+.active {
+    background-color: rgb(201, 201, 199);
+}
+
 input, label, button, select {
     font-family: inherit;
     font-size: 70%;
     padding: 5px;
-    /* width: 100%; */
 }
 
 .project-item, .todo-item {
@@ -63,7 +66,6 @@ input, label, button, select {
 
 .todo-items {
     width: 100%;
-    /* max-width: 60rem; */
 }
 
 button {
@@ -92,4 +94,8 @@ button {
     width: 100%;
     background-color: transparent;
     text-align: left;
+}
+
+.project-item, button {
+    cursor: pointer;
 }
