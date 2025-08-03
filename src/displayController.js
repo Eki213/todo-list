@@ -148,8 +148,8 @@ function createForm(type, fieldsMap) {
     let currentKey; 
 
     fields.forEach(el => form.appendChild(el.getEl()));
-    form.appendChild(createCancelButton());
     form.appendChild(createSaveButton());
+    form.appendChild(createCancelButton());
 
     const toggleAddButton = () => addButton.toggleAttribute("hidden");
 
@@ -197,7 +197,8 @@ function createForm(type, fieldsMap) {
 
         if (currentKey) {
             const item = entityHandlers[type]?.get(currentKey);
-            form.replaceWith(entityHandlers[type]?.createEl(item));
+            const itemEl = form.closest("[data-type]");
+            itemEl.replaceChildren(...entityHandlers[type]?.createEl(item).children);
         } else {
             form.remove();
             toggleAddButton();
@@ -235,18 +236,33 @@ function createProjectEl(project) {
 
     const para = document.createElement("p");
     para.textContent = project.title;
-    para.className = project.title;
+    para.className = "title";
     projectEl.appendChild(para);
     
 
     if (project.id !== DEFAULT_PROJECT_ID) {
-        const editButton = createEditButton();
-        const deleteButton = createDeleteButton();
-        projectEl.appendChild(editButton);
-        projectEl.appendChild(deleteButton);
+        // const editButton = createEditButton();
+        // const deleteButton = createDeleteButton();
+        // projectEl.appendChild(editButton);
+        // projectEl.appendChild(deleteButton);
+        const buttons = createButtons();
+        projectEl.appendChild(buttons);
     }
 
     return projectEl;
+}
+
+function createButtons() {
+    const buttons = document.createElement("div");
+    buttons.className = "buttons";
+
+    const editButton = createEditButton();
+    const deleteButton = createDeleteButton();
+
+    buttons.appendChild(editButton);
+    buttons.appendChild(deleteButton);
+
+    return buttons;
 }
 
 function createDeleteButton() {
@@ -268,29 +284,35 @@ function createEditButton() {
 }
 
 function createTodoEl(todo) {
-    const div = document.createElement("div");
-    div.className = "todo-item";
-    div.dataset.type = "todo";
-    div.dataset.index = getProjectTodos(currentProjectId).indexOf(todo);
+    const todoEl = document.createElement("div");
+    todoEl.className = "todo-item";
+    todoEl.dataset.type = "todo";
+    todoEl.dataset.index = getProjectTodos(currentProjectId).indexOf(todo);
 
-    const deleteButton = createDeleteButton();
-    const editButton = createEditButton();
+    // const deleteButton = createDeleteButton();
+    // const editButton = createEditButton();
+    const buttons = createButtons();
     const checkbox = createCheckbox(todo);
 
-    div.appendChild(checkbox);
+    const info = document.createElement("div");
+    info.classList = "info";
+
+    todoEl.appendChild(checkbox);
 
     for (const prop in todo) {
         if (prop === "isCompleted") continue;
         const para = document.createElement("p");
         para.textContent = prop === "date" ? getFormattedDate(todo[prop]) : todo[prop];
         para.className = prop;
-        div.appendChild(para);
+        info.appendChild(para);
     }
 
-    div.appendChild(deleteButton);
-    div.appendChild(editButton);
+    // div.appendChild(deleteButton);
+    // div.appendChild(editButton);
+    todoEl.appendChild(info);
+    todoEl.appendChild(buttons);
 
-    return div;
+    return todoEl;
 }
 
 function createCheckbox(todo) {
@@ -298,7 +320,12 @@ function createCheckbox(todo) {
     checkbox.type = "checkbox";
     checkbox.checked = todo.isCompleted;
 
-    return checkbox;
+    const container = document.createElement("div")
+    container.className = "checkbox"
+
+    container.appendChild(checkbox);
+
+    return container;
 }
 
 function createTitleEl() {
