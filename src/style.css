@@ -11,6 +11,7 @@
 
 body {
     display: flex;
+    flex-wrap: wrap;
     min-height: 100vh;
     gap: 1rem;
     font-family: "Roboto", sans-serif;
@@ -20,18 +21,18 @@ body {
 main {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    margin: 0 auto;
-    padding: 1rem;
-    max-width: 60rem;
+    flex: 4;
+    padding: 2rem;
+    align-items: center;
 }
 
 aside {
     background-color: rgb(233, 233, 228);
     padding: 1rem;
+    flex: 1;
 }
 
-.project-item:hover, .add-button:hover {
+.project-item:not(:has(form)):hover, .add-button:hover {
     background-color: rgb(201, 201, 199);
 }
 
@@ -42,36 +43,93 @@ aside {
 input, label, button, select {
     font-family: inherit;
     font-size: 70%;
-    padding: 5px;
+    padding: 0.35rem;
 }
 
-.project-item, .todo-item {
+.project-item, .todo-item, form {
     display: flex;
-    min-width: max-content;
     align-items: center;
     gap: 1rem;
+    padding: 0.5rem;
+    border-radius: 0.3rem;
 }
 
-.todo-item {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.199); 
+.todo-item, form {
+    border: 1px solid rgba(0, 0, 0, 0.199);
+    border-left: 0.5rem solid transparent;
 }
 
-.todo-item .info {
-    flex: 1;
+.todo-item:has(form) {
+    padding: 0;
 }
 
-.project-item .title {
-    width: 8rem;
+.todo-item form {
+    border: none;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+input[type="date"] {
+    position: relative;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: auto;
+    color: transparent;
+    background: transparent;
+    cursor: pointer;
+}
+
+
+[data-priority="priority1"] {
+    border-left-color: red;
+}
+
+[data-priority="priority2"] {
+    border-left-color: orange;
+}
+
+[data-priority="priority3"] {
+    border-left-color: blue;
+}
+
+[data-priority="priority4"] {
+    border-left-color: cyan;
+}
+
+.todo-items, .projects {
+    display: flex;
+    flex-direction: column;
 }
 
 .todo-items {
-    width: 100%;
+    gap: 0.7rem;
+    min-width: max-content;
+}
+
+.add-button[data-type="todo"], .todo-items {
+    width: 85%;
+}
+
+.projects {
+    gap: 0.4rem;
 }
 
 button {
     color: white;
     width: 3rem;
-    min-width: max-content;
     border: none;
     border-radius: 0.3rem;
 }
@@ -94,8 +152,113 @@ button {
     width: 100%;
     background-color: transparent;
     text-align: left;
+    margin-top: 0.6rem;
 }
 
-.project-item, button {
+.project-item:not(:has(form)):hover, button, input[type="checkbox"] {
     cursor: pointer;
+}
+
+.isCompleted {
+    align-self: start;
+}
+
+input[type="checkbox"] {
+    appearance: none;
+    position: relative;
+    width: 0.8rem;
+    height: 0.8rem;
+    vertical-align: -0.13rem;
+    color: white;
+    background-color: rgb(90, 116, 199);
+    border-radius: 0.25rem;
+}
+
+input[type="checkbox"]::before {
+    content: "✔";
+    position: absolute;
+    top: -0.1rem;
+    right: 0.08rem;
+    visibility: hidden;
+}
+
+input[type="checkbox"]:checked::before {
+    visibility: visible;
+}
+
+.todo-item:has(input[type="checkbox"]:not(:checked)).isPast .date {
+    color: red;
+}
+
+.todo-item:has(input[type="checkbox"]:checked) {
+    background-color: rgb(236, 234, 234);
+    color: grey;
+    border-left-color: grey;
+}
+
+.pickers {
+    display: flex;
+    gap: 1rem;
+}
+
+input, select {
+    border-radius: 0.4rem;
+    border: 1px solid rgba(0, 0, 0, 0.199);
+}
+
+.pickers > *:hover {
+    background-color: rgb(201, 201, 199);
+}
+
+select option {
+    background-color: white;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(0, 0, 0, 0.199);
+    margin: 0 -0.5rem;
+    padding: 0.5rem 0.5rem 0;
+}
+
+.project-item form, form[data-type="project"] {
+    border-left: 1px solid rgba(0, 0, 0, 0.199);
+}
+
+.project-item:has(form) {
+    padding: 0;
+}
+
+.project-item .footer, form[data-type="project"] .footer {
+    justify-content: end;
+}
+
+.info {
+    flex: 1;
+    width: 4rem;
+}
+
+.project-title {
+    width: 50vw;
+}
+
+.project {
+    width: 6rem;
+}
+
+.project-title {
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.title, .description, .project-title, .project {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.projects > :first-child {
+    font-weight: 700;
 }

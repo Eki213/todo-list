@@ -2,7 +2,7 @@ import { registerProject, addTodoToProject, getProjectTodos, deleteTodoByIndex, 
 import { getProjects, DEFAULT_PROJECT_ID } from "./projects";
 import { saveLastProjectId, getLastProjectId } from "./storage";
 import { getFormattedDate, parseDate } from "./formatDate";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 export { load, addEventListeners };
 
 let currentProjectId = getLastProjectId() || DEFAULT_PROJECT_ID;
@@ -44,9 +44,7 @@ function addEventListeners() {
                     break;
 
                 case "save-button":
-                    event.preventDefault();
                     if (!form.isValid()) return;
-
                     form.close();
                     entityHandlers[type]?.save(keyValue, form.read());
                     entityHandlers[type]?.load();
@@ -77,6 +75,7 @@ function addEventListeners() {
 
 function changeProject(id) {
     todoForm.close();
+    projectForm.close();
     currentProjectId = id;
     load();
     saveLastProjectId(currentProjectId);
@@ -157,9 +156,36 @@ function createForm(type, fieldsMap) {
     const isValid = () => form.reportValidity();
     let currentKey; 
 
-    fields.forEach(el => form.appendChild(el.getEl()));
-    form.appendChild(createSaveButton());
-    form.appendChild(createCancelButton());
+    const pickers = document.createElement("div");
+    const footer = document.createElement("div"); 
+    pickers.className = "pickers";
+    footer.className = "footer";
+    fields.forEach(elObj => {
+        const el = elObj.getEl();
+        const containers = {
+            pickers: ["date", "priority",],
+            footer: ["project",],
+        };
+        let container;
+        if (containers.pickers.includes(el.className)) {
+            container = pickers;
+        } else if (containers.footer.includes(el.className)) {
+            container = footer;
+        } else {
+            container = form;
+        }
+        container.appendChild(el);
+    });
+    form.appendChild(pickers);
+    form.appendChild(footer);
+
+    const buttons = document.createElement("div");
+    buttons.className = "buttons";
+
+    buttons.appendChild(createSaveButton());
+    buttons.appendChild(createCancelButton());
+
+    footer.appendChild(buttons);
 
     const toggleAddButton = () => addButton.toggleAttribute("hidden");
 
@@ -181,11 +207,13 @@ function createForm(type, fieldsMap) {
 
     function displayForm(key) {
         if (key) {
+            delete form.dataset.priority;
             delete form.dataset.type;
             entityHandlers[type]?.getEl(key).replaceChildren(form);
         } else {
             entityHandlers[type]?.getListElement().appendChild(form);
             toggleAddButton();
+            form.dataset.priority = "priority4";
             form.dataset.type = type;
         }
     }
@@ -208,7 +236,7 @@ function createForm(type, fieldsMap) {
         if (currentKey) {
             const item = entityHandlers[type]?.get(currentKey);
             const itemEl = form.closest("[data-type]");
-            itemEl.replaceChildren(...entityHandlers[type]?.createEl(item).children);
+            itemEl.replaceWith(entityHandlers[type]?.createEl(item));
         } else {
             form.remove();
             toggleAddButton();
@@ -233,7 +261,14 @@ function addProjectOption(project) {
 function addPriorityOption(priority) {
     const option = document.createElement("option");
     option.value = priority;
-    option.textContent = priority;
+    const names = {
+        priority1: "Priority 1",
+        priority2: "Priority 2",
+        priority3: "Priority 3",
+        priority4: "Priority 4",
+    };
+
+    option.textContent = names[priority];
 
     return option;
 }
@@ -244,10 +279,15 @@ function createProjectEl(project) {
     projectEl.dataset.type = "project";
     projectEl.className = "project-item";
 
-    const para = document.createElement("p");
-    para.textContent = project.title;
-    para.className = "title";
-    projectEl.appendChild(para);
+    const info = document.createElement("div");
+    info.className = "info";
+
+    const div = document.createElement("div");
+    div.textContent = project.title;
+    div.className = "title";
+
+    info.appendChild(div);
+    projectEl.appendChild(info);
     
     if (project.id === currentProjectId) projectEl.classList.add("active");
 
@@ -296,49 +336,61 @@ function createTodoEl(todo) {
     todoEl.dataset.type = "todo";
     todoEl.dataset.index = getProjectTodos(currentProjectId).indexOf(todo);
 
-    // const deleteButton = createDeleteButton();
-    // const editButton = createEditButton();
     const buttons = createButtons();
-    const checkbox = createCheckbox(todo);
-
     const info = document.createElement("div");
     info.classList = "info";
 
-    todoEl.appendChild(checkbox);
-
     for (const prop in todo) {
-        if (prop === "isCompleted") continue;
-        const para = document.createElement("p");
-        para.textContent = prop === "date" ? getFormattedDate(todo[prop]) : todo[prop];
-        para.className = prop;
-        info.appendChild(para);
+        const div = document.createElement("div");
+        const render = renderers[prop];
+        const value = render ? render(todo[prop], todoEl) : todo[prop];
+        if (value) {
+            div.append(value);
+            div.className = prop;
+            prop === "isCompleted" ? todoEl.appendChild(div) : info.appendChild(div);
+        }
     }
 
-    // div.appendChild(deleteButton);
-    // div.appendChild(editButton);
     todoEl.appendChild(info);
     todoEl.appendChild(buttons);
 
     return todoEl;
 }
 
-function createCheckbox(todo) {
+function isPast(date) {
+    const today = startOfDay(new Date());
+    const itemDate = startOfDay(new Date(date));
+
+    return itemDate < today;
+}
+
+const renderers = {
+    date: (date, el) => {
+        if (date && isPast(date)) el.classList.add("isPast");
+        return getFormattedDate(date);
+    },
+    isCompleted: (isCompleted, el) => createCheckbox(isCompleted),
+    priority: (priority, el) => loadPriority(priority, el),
+};
+
+function loadPriority(priority, el) {
+    el.dataset.priority = priority;
+}
+
+function createCheckbox(isCompleted) {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = todo.isCompleted;
+    checkbox.checked = isCompleted;
 
-    const container = document.createElement("div")
-    container.className = "checkbox"
-
-    container.appendChild(checkbox);
-
-    return container;
+    return checkbox;
 }
 
 function createTitleEl() {
     const title = document.createElement("input");
     title.required = true;
     title.className = "title";
+    title.placeholder = "Title";
+    title.maxLength = 100;
 
     function setEl(item) {
         title.value = item.title;
@@ -354,6 +406,8 @@ function createTitleEl() {
 function createDescriptionEl() {
     const description = document.createElement("input");
     description.className = "description";
+    description.placeholder = "Description";
+    description.maxLength = 150;
 
     function setEl(item) {
         description.value = item.description;
@@ -371,10 +425,15 @@ function createDatePicker() {
     datePicker.min = format(new Date(), "yyyy-MM-dd");
     datePicker.type = "date";
     datePicker.className = "date";
+    datePicker.addEventListener("change", () => {
+        const item = datePicker.closest("[data-type]");
+        const value = datePicker.value;
+        item.classList.toggle("isPast", value < format(new Date(), "yyyy-MM-dd"));
+    });
 
     function setEl(item) {
         const itemDate = item.date;
-        if (itemDate) datePicker.value = format(itemDate, "yyyy-MM-dd");
+        datePicker.value = itemDate ? format(itemDate, "yyyy-MM-dd") : "";
     }
 
     const getEl = () => datePicker;
@@ -388,7 +447,7 @@ function createSaveButton() {
     const saveButton = document.createElement("button");
     saveButton.textContent = "Save";
     saveButton.className = "save-button";
-    saveButton.type = "submit";
+    saveButton.type = "button";
 
     return saveButton;
 }
@@ -407,10 +466,16 @@ function createPrioritySelect() {
     prioritySelect.className = "priority";
     const PRIORITIES = ["priority1", "priority2", "priority3", "priority4"];
     loadArrayToEl(PRIORITIES, prioritySelect, addPriorityOption);
+    prioritySelect.options[3].defaultSelected = true;
+
+    prioritySelect.addEventListener("change", (event) => {
+        const item = prioritySelect.closest("[data-priority]");
+
+        item.dataset.priority = event.target.value;
+    });
 
     function setEl(item) {
-        const priorityOption = [...prioritySelect.options].find((option) => option.value === item.priority);
-        priorityOption.selected = true;
+        prioritySelect.value = item.priority;
     }
 
     const getEl = () => prioritySelect;
@@ -428,8 +493,7 @@ function createProjectSelect() {
     const setEl = () => {
         const projects = getProjects();
         loadArrayToEl(projects, projectSelect, addProjectOption);
-        const currentProject = [...projectSelect.options].find((option) => option.value === currentProjectId);
-        currentProject.selected = true;
+        projectSelect.value = currentProjectId;
     };
     const getValue = () => projectSelect.value;
 
