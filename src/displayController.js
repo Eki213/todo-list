@@ -39,15 +39,14 @@ function addEventListeners() {
 
             switch (button.className) {
                 case "delete-button":
+                    itemEl.remove();
                     entityHandlers[type]?.delete(keyValue);
-                    entityHandlers[type]?.load();
                     break;
 
                 case "save-button":
                     if (!form.isValid()) return;
-                    form.close();
                     entityHandlers[type]?.save(keyValue, form.read());
-                    entityHandlers[type]?.load();
+                    form.close();
                     break;
 
                 case "edit-button":
@@ -76,8 +75,14 @@ function addEventListeners() {
 function changeProject(id) {
     todoForm.close();
     projectForm.close();
+
+    const currentProject = entityHandlers.project.getEl(currentProjectId);
+    const newProject = entityHandlers.project.getEl(id);
+    if (currentProject) currentProject.classList.remove("active");
+    newProject.classList.add("active");
+
     currentProjectId = id;
-    load();
+    entityHandlers.todo.load();
     saveLastProjectId(currentProjectId);
 }
 
@@ -104,11 +109,18 @@ function setProjectTitleEl() {
 
 const entityHandlers = {
     todo: {
-        delete: (index) => deleteTodoByIndex(currentProjectId, index),
-        save: (index, formData) =>
-            index
-                ? editTodo(currentProjectId, index, formData)
-                : addTodoToProject(formData),
+        delete: (index) => { 
+            deleteTodoByIndex(currentProjectId, index);
+            [...todoListEl.children].forEach((item, index) => item.dataset.index = index);
+        },
+        save: (index, formData) => {
+            if (index) {
+                editTodo(currentProjectId, index, formData);
+            } else {
+                addTodoToProject(formData);
+                if (formData.projectId === currentProjectId) todoListEl.appendChild(createTodoEl(entityHandlers.todo.get(-1)));
+            }
+        },
         getKey: () => "index",
         get: (index) => getTodoFromProject(currentProjectId, index),
         getAll: () => getProjectTodos(currentProjectId),
@@ -133,6 +145,7 @@ const entityHandlers = {
                 setProjectTitleEl();
             } else {
                 const newProjectId = registerProject(formData);
+                projectListEl.appendChild(createProjectEl(getProject(newProjectId)));
                 changeProject(newProjectId);
             }
             todoForm.updateField("projectId");
@@ -236,7 +249,7 @@ function createForm(type, fieldsMap) {
         if (currentKey) {
             const item = entityHandlers[type]?.get(currentKey);
             const itemEl = form.closest("[data-type]");
-            itemEl.replaceWith(entityHandlers[type]?.createEl(item));
+            item ? itemEl.replaceWith(entityHandlers[type]?.createEl(item)) : itemEl.remove();
         } else {
             form.remove();
             toggleAddButton();

@@ -56,7 +56,7 @@ function getProjectTodos(projectId) {
 
 function getTodoFromProject(projectId, index) {
     const project = projects.findProject(projectId);
-    return project.getTodoItems()[index];
+    return project.getTodoItems().at(index);
 }
 
 function editTodo(projectId, index, data) {
